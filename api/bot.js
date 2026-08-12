@@ -4,98 +4,81 @@ const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 app.use(express.json());
 
-// ایکٹو بوٹس کے انسٹنسز کو میموری میں محفوظ رکھنے کے لیے
-const activeBots = {};
+// 1. Webhook Endpoint - جہاں ٹیلیگرام جوائن ریکویسٹ کا ڈیٹا بھیجے گا
+app.post('/api/webhook/:token', async (req, res) => {
+  const { token } = req.params;
+  const { msg, chnlurl } = req.query; // Query params کے ذریعے ڈیٹا حاصل کریں گے
 
-/**
- * URL Pattern:
- * /api/token={token}/msg={msg}/chnl={chnlurl}/{status}
- * 
- * status = true  (To install & run bot)
- * status = false (To uninstall & stop bot)
- */
-app.get('/api/token=:token/msg=:msg/chnl=:chnlurl/:status', (req, res) => {
-  const { token, msg, chnlurl, status } = req.params;
+  const update = req.body;
 
-  // 1. بوٹ بند / ان انسٹال (Status = false)
-  if (status === 'false') {
-    if (activeBots[token]) {
-      try {
-        activeBots[token].stopPolling();
-        delete activeBots[token];
-        return res.json({
-          success: true,
-          message: 'Bot uninstalled and stopped successfully.'
-        });
-      } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
-      }
-    } else {
-      return res.json({
-        success: true,
-        message: 'Bot was not running or already uninstalled.'
-      });
-    }
-  }
+  // اگر جوائن ریکویسٹ آئی ہے
+  if (update && update.chat_join_request) {
+    const joinReq = update.chat_join_request;
+    const userId = joinReq.from.id;
+    const firstName = joinReq.from.first_name || 'User';
 
-  // 2. بوٹ چلانے / انسٹال کرنے کے لیے (Status = true)
-  if (status === 'true') {
+    const bot = new TelegramBot(token);
+
+    const messageText = `${msg || 'Welcome!'}\n\n${chnlurl || ''}`.replace('{name}', firstName);
+
     try {
-      // اگر بوٹ پہلے سے چل رہی ہے تو پرانی کو پہلے سٹاپ کریں
-      if (activeBots[token]) {
-        activeBots[token].stopPolling();
-      }
-
-      // نیا Telegram Bot انسٹنس (Polling Mode)
-      const bot = new TelegramBot(token, { polling: true });
-
-      // جوائن ریکویسٹ کا ایونٹ
-      bot.on('chat_join_request', async (joinReq) => {
-        const userId = joinReq.from.id;
-        const firstName = joinReq.from.first_name || 'User';
-
-        // میسج کو فارمیٹ کریں اور چینل کا لنک شامل کریں
-        const textToSend = `${msg}\n\n${chnlurl}`.replace('{name}', firstName);
-
-        try {
-          // ممبر کو پرسنل چیٹ (DM) میں میسج بھیجیں
-          await bot.sendMessage(userId, textToSend);
-          console.log(`[Success] Sent message to ${userId}`);
-        } catch (error) {
-          console.error(`[Error] Failed to send message to ${userId}:`, error.message);
-        }
-      });
-
-      // بوٹ کو میموری میں محفوظ رکھیں
-      activeBots[token] = bot;
-
-      return res.json({
-        success: true,
-        message: 'Bot installed and started successfully.',
-        config: {
-          token,
-          message: msg,
-          channelUrl: chnlurl
-        }
-      });
-
+      await bot.sendMessage(userId, messageText);
+      console.log(`Sent message to ${userId}`);
     } catch (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to start bot',
-        error: err.message
-      });
+      console.error(`Error sending message: ${err.message}`);
     }
   }
 
-  return res.status(400).json({ success: false, message: 'Invalid status parameter. Use true or false.' });
+  return res.status(200).send('OK');
 });
 
-// Local test یا Vercel کے لیے Server Export
-const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}
+// 2. Install / Uninstall API Route
+app.get('/api/manage', async (req, res) => {
+  const { token, msg, chnlurl, status } = req.query;
+
+  if (!token) {
+    return res.status(400).json({ success: false, error: 'Token is required.' });
+  }
+
+  const bot = new TelegramBot(token);
+  // آپ کی Vercel ڈومین
+  const appDomain = 'https://magic-scripts.vercel.app';
+
+  if (status === 'true') {
+    try {
+      // URL Encoding کا استعمال تاکہ Telegram URL میں کوئی مسئلہ نہ آئے
+      const encodedMsg = encodeURIComponent(msg || '');
+      const encodedChnl = encodeURIComponent(chnlurl || '');
+
+      const webhookUrl = `${appDomain}/api/webhook/${token}?msg=${encodedMsg}&chnlurl=${encodedChnl}`;
+
+      // Telegram پر Webhook سیٹ کریں
+      await bot.setWebhook(webhookUrl, {
+        allowed_updates: ['chat_join_request']
+      });
+
+      return res.json({
+        success: true,
+        message: 'Bot installed successfully with Webhook.',
+        webhookUrl
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  } else if (status === 'false') {
+    try {
+      // Webhook ہٹائیں (Uninstall)
+      await bot.deleteWebhook();
+      return res.json({
+        success: true,
+        message: 'Bot uninstalled successfully.'
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  return res.status(400).json({ success: false, error: 'Status must be true or false.' });
+});
 
 module.exports = app;
-  
