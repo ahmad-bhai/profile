@@ -4,26 +4,23 @@ const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 app.use(express.json());
 
-// 1. Webhook Endpoint - جہاں ٹیلیگرام جوائن ریکویسٹ کا ڈیٹا بھیجے گا
+// 1. Webhook Endpoint - ٹیلیگرام کی طرف سے آنے والے میسجز کے لیے
 app.post('/api/webhook/:token', async (req, res) => {
   const { token } = req.params;
-  const { msg, chnlurl } = req.query; // Query params کے ذریعے ڈیٹا حاصل کریں گے
+  const { msg, chnlurl } = req.query;
 
   const update = req.body;
 
-  // اگر جوائن ریکویسٹ آئی ہے
   if (update && update.chat_join_request) {
     const joinReq = update.chat_join_request;
     const userId = joinReq.from.id;
     const firstName = joinReq.from.first_name || 'User';
 
     const bot = new TelegramBot(token);
-
     const messageText = `${msg || 'Welcome!'}\n\n${chnlurl || ''}`.replace('{name}', firstName);
 
     try {
       await bot.sendMessage(userId, messageText);
-      console.log(`Sent message to ${userId}`);
     } catch (err) {
       console.error(`Error sending message: ${err.message}`);
     }
@@ -32,34 +29,31 @@ app.post('/api/webhook/:token', async (req, res) => {
   return res.status(200).send('OK');
 });
 
-// 2. Install / Uninstall API Route
+// 2. Main Manage Route
 app.get('/api/manage', async (req, res) => {
   const { token, msg, chnlurl, status } = req.query;
 
   if (!token) {
-    return res.status(400).json({ success: false, error: 'Token is required.' });
+    return res.status(400).json({ success: false, error: 'Token parameter missing.' });
   }
 
   const bot = new TelegramBot(token);
-  // آپ کی Vercel ڈومین
-  const appDomain = 'https://profile-tau-sage-32.vercel.app';
+  const appDomain = 'https://magic-scripts.vercel.app';
 
   if (status === 'true') {
     try {
-      // URL Encoding کا استعمال تاکہ Telegram URL میں کوئی مسئلہ نہ آئے
       const encodedMsg = encodeURIComponent(msg || '');
       const encodedChnl = encodeURIComponent(chnlurl || '');
 
       const webhookUrl = `${appDomain}/api/webhook/${token}?msg=${encodedMsg}&chnlurl=${encodedChnl}`;
 
-      // Telegram پر Webhook سیٹ کریں
       await bot.setWebhook(webhookUrl, {
         allowed_updates: ['chat_join_request']
       });
 
       return res.json({
         success: true,
-        message: 'Bot installed successfully with Webhook.',
+        message: 'Bot installed successfully with Webhook!',
         webhookUrl
       });
     } catch (error) {
@@ -67,7 +61,6 @@ app.get('/api/manage', async (req, res) => {
     }
   } else if (status === 'false') {
     try {
-      // Webhook ہٹائیں (Uninstall)
       await bot.deleteWebhook();
       return res.json({
         success: true,
@@ -79,6 +72,13 @@ app.get('/api/manage', async (req, res) => {
   }
 
   return res.status(400).json({ success: false, error: 'Status must be true or false.' });
+});
+
+// 3. Fallback Route (اگر کوئی غلط Endpoint پر جائے)
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'API Endpoint Not Found. Make sure you use /api/manage'
+  });
 });
 
 module.exports = app;
