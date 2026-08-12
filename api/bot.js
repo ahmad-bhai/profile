@@ -42,7 +42,7 @@ app.get('/api/manage', async (req, res) => {
 
   const bot = new TelegramBot(token);
   // آپ کی Vercel ڈومین
-  const appDomain = 'https://magic-scripts.vercel.app';
+  const appDomain = 'https://profile-tau-sage-32.vercel.app';
 
   if (status === 'true') {
     try {
