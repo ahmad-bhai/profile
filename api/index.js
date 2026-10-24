@@ -88,19 +88,19 @@ module.exports = async (req, res) => {
     // --- Start Command ---
     bot.start((ctx) => {
       const firstName = ctx.from.first_name || "Dear";
-      ctx.replyWithMarkdown(`👋 *Hy Dear ${firstName}*\n\nPlease enter your Quotex Account ID (only numbers) to verify your registration and unlock VIP access.\n\n*REGISTRATION LINK*\n👇👇👇\nhttps://market-qx.trade/sign-up/?lid=2056722`);
+      ctx.replyWithMarkdown(`👋 *Hy Dear ${firstName}*\n\nPlease enter your Quotex Account ID (only numbers) to verify your registration and unlock VIP access.\n\n*REGISTRATION LINK*\n👇👇👇\nhttps://broker-qx.pro/?lid=1708208`);
     });
 
     // --- Account Command ---
     bot.command('account', (ctx) => {
-      ctx.replyWithMarkdown(`*How to create Quotex account?*\n\n1st step: Withdraw all your funds.\n2nd step: Delete your old Quotex account.\n3rd step: Open this link:\nhttps://broker-qx.pro/sign-up/?lid=2056722\n\n4th step: Select your country, enter your NEW email and secure password, agree to terms, and click Register.\n\n🎉 *Congratulations!* Your account is created. Now enter your Trader ID.`);
+      ctx.replyWithMarkdown(`*How to create Quotex account?*\n\n1st step: Withdraw all your funds.\n2nd step: Delete your old Quotex account.\n3rd step: Open this link:\nhttps://broker-qx.pro/?lid=1708208\n\n4th step: Select your country, enter your NEW email and secure password, agree to terms, and click Register.\n\n🎉 *Congratulations!* Your account is created. Now enter your Trader ID.`);
     });
 
     // --- Support Command ---
     bot.command('support', (ctx) => {
-      ctx.replyWithMarkdown(`*RQA OFFICIAL SUPPORT TEAM*`, 
+      ctx.replyWithMarkdown(`*OFFICIAL SUPPORT TEAM*`, 
         Markup.inlineKeyboard([
-          Markup.button.url("📞 Contact Support", "https://t.me/RQA_OFFICIAL")
+          Markup.button.url("📞 Contact Support", "https://t.me/SHKTI_QUOTEX_TRADER90")
         ])
       );
     });
