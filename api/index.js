@@ -131,7 +131,7 @@ module.exports = async (req, res) => {
       try {
         const response = await axios({
           method: 'post',
-          url: 'https://affiliate-verify.vercel.app/api/postback',
+          url: 'https://profile-tau-sage-32.vercel.app/api/postback',
           data: { checkId: trader_id },
           headers: {
             'Content-Type': 'application/json',
